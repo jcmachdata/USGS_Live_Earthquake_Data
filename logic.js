@@ -1,103 +1,126 @@
-// Create a map object
-const myMap = L.map("map", {
-    center: [39.68, -111.00],
-    zoom: 5
-});
+
+// Store our API endpoint inside queryUrl
+var url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+
+function createFeatures(earthquakeData) {
+    var earthquakes = L.geoJSON(earthquakeData, {
+        onEachFeature: function(feature, layer) {
+            layer.bindPopup("<h3>" + feature.properties.place +
+            "</h3><hr><p>" + new Date(feature.properties.time) + "</p>" + "Magnitude: " + feature.properties.mag);
+          },
+
+          pointToLayer: function (feature, latlng) {
+            return new L.circle(latlng,
+              {radius: getRadius(feature.properties.mag),
+              fillColor: getColor(feature.properties.mag),
+              fillOpacity: .6,
+              color: "#000",
+              stroke: true,
+              weight: .8
+          })
+        }
+        });
+
+    createMap(earthquakes);
+}
+
+ // Sending our earthquakes layer to the createMap function
+
+function createMap(earthquakes) {
+
+    // Define streetmap and darkmap layers
+    const streetmap = L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
+            attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+            maxZoom: 18,
+            id: "mapbox.streets",
+            accessToken: API_KEY
+    });
+
+    const darkmap = L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
+            attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+            maxZoom: 18,
+            id: "mapbox.dark",
+            accessToken: API_KEY
+    });
+
+    // Define a baseMaps object to hold our base layers
+    const baseMaps = {
+            "Street Map": streetmap,
+            "Dark Map": darkmap
+    };
+
+    // Create overlay object to hold our overlay layer
+    const overlayMaps = {
+            Earthquakes: earthquakes
+    };
+
+    // Create our map, giving it the streetmap and earthquakes layers to display on load
+    const myMap = L.map("map", {
+            center: [39.68, -111.00],
+            zoom: 5,
+            layers: [streetmap, earthquakes]
+    });
+
+    // Create a layer control
+    // Pass in our baseMaps and overlayMaps
+    // Add the layer control to the map
+    L.control.layers(baseMaps, overlayMaps, {
+            collapsed: false
+    }).addTo(myMap);
+
+   // Create legend
+   var legend = L.control({
+    position: "bottomright"
+    });
+
+    legend.onAdd = function(myMap) {
+      var div = L.DomUtil.create("div", "info legend"),
+      grades = [0, 1, 2, 3, 4, 5],
+      labels = [];
 
 
-
-
-
-
-
-
-
-
-L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
-    attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
-    maxZoom: 18,
-    id: "mapbox.streets-basic",
-    accessToken: API_KEY
-}).addTo(myMap);
-
-// Country data
-const countries = [
-  {
-    name: "Brazil",
-    location: [-14.2350, -51.9253],
-    points: 227
-  },
-  {
-    name: "Germany",
-    location: [51.1657, 10.4515],
-    points: 218
-  },
-  {
-    name: "Italy",
-    location: [41.8719, 12.5675],
-    points: 156
-  },
-  {
-    name: "Argentina",
-    location: [-38.4161, -63.6167],
-    points: 140
-  },
-  {
-    name: "Spain",
-    location: [40.4637, -3.7492],
-    points: 99
-  },
-  {
-    name: "England",
-    location: [52.355, 1.1743],
-    points: 98
-  },
-  {
-    name: "France",
-    location: [46.2276, 2.2137],
-    points: 96
-  },
-  {
-    name: "Netherlands",
-    location: [52.1326, 5.2913],
-    points: 93
-  },
-  {
-    name: "Uruguay",
-    location: [-32.4228, -55.7658],
-    points: 72
-  },
-  {
-    name: "Sweden",
-    location: [60.1282, 18.6435],
-    points: 61
-  }
-];
-
-
-// Loop through the cities array and create one marker for each city object
-countries.forEach(country => {
-    // Conditionals for countries points
-    let color = "";
-    if (country.points > 200) {
-        color = "yellow";
+    for (var i = 0; i < grades.length; i++) {
+        div.innerHTML +=
+        '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
     }
-    else if (country.points > 100) {
-        color = "blue";
-    }
-    else if (country.points > 90) {
-        color = "green";
-    }
-    else {
-        color = "red";
-    }
+        return div;
+    };
 
-    // Add circles to map
-    L.circle(country.location, {
-        fillOpacity: 0.75,
-        color: "white",
-        fillColor: color,
-        // Adjust radius
-        radius: country.points * 1500
-    }).bindPopup("<h1>" + country.name + "</h1> <hr> <h3>Points: " + country.points + "</h3>").addTo(myMap);
-})
+    legend.addTo(myMap);
+
+}
+
+(async function(){
+    const data = await d3.json(url);
+    // Once we get a response, send the data.features object to the createFeatures function
+    createFeatures(data.features);
+})()
+
+
+// function for magnitude colors
+function getColor(magnitude) {
+    if (magnitude > 5) {
+        return 'red'
+    } else if (magnitude > 4) {
+        return 'orange'
+    } else if (magnitude > 3) {
+        return 'purple'
+    } else if (magnitude > 2) {
+        return 'yellow'
+    } else if (magnitude > 1) {
+        return 'green'
+    } else {
+        return 'lightgreen'
+    }
+};
+
+// create radius function
+function getRadius(magnitude) {
+    return magnitude * 10000;
+};
+
+// function getRadius(magnitude) {
+//     return Math.pow(magnitude, 10)/15;
+// };
+
